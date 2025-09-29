@@ -1,0 +1,94 @@
+---
+title: "Chess Tournament Project"
+author: "Escarlet Gabriel Vicente"
+date: "2025-09-21"
+output: html_document
+---
+
+## Goal
+In this project, I worked with a text file (`tournamentinfo.txt`) containing raw chess tournament results.
+My objective was to transform the text into a clean dataset with the following variables:  
+- Player’s Name  
+- Player’s State  
+- Total Points  
+- Pre-Tournament Rating  
+- Average Opponent Pre-Rating
+
+## 1. Load Libraries
+To start, I loaded the libraries I used:
+
+*readr* for reading the text file
+
+*stringr* for working with regular expressions
+
+*dplyr* for data manipulation
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(stringr)
+library(dplyr)
+```
+
+## 2. Read the Raw Data
+I read the text file into R. Each line was stored as one element in a character vector.
+```{r loading_data}
+lines <- read_lines("tournamentinfo.txt")
+length(lines) 
+head(lines, 10)
+```
+
+## 3. Identify Player Records
+Each player’s information spans two lines: the first line includes name, points, and opponents, and the second line includes state and rating. I isolated those lines here.
+```{r filter}
+idx <- grep("^\\s*[0-9]+\\s+\\|", lines)
+player_lines <- lines[idx]
+rating_lines <- lines[idx + 1]
+length(idx) 
+head(player_lines, 3)
+head(rating_lines, 3)
+```
+
+## 4. Extract Core Fields 
+From the player and rating lines, I extracted the player’s name, state, total points, and pre-tournament rating.
+```{r extracting_core_fields}
+names <- str_match(player_lines, "\\|\\s*([A-Z .'-]+)")[,2]
+points <- as.numeric(str_match(player_lines, "\\|(\\d+\\.\\d)")[,2])
+state <- str_match(rating_lines, "^\\s*([A-Z]{2})")[,2]
+pre_rating <- as.numeric(str_match(rating_lines, "R:\\s*(\\d+)")[,2])
+
+df <- data.frame(
+  Name = names,
+  State = state,
+  Points = points,
+  PreRating = pre_rating,
+  stringsAsFactors = FALSE
+)
+head(df, 5)
+```
+
+## 5. Extract Opponents IDs
+I extracted all numbers from the results row. This gave me the opponent IDs, along with a few extra digits such as the points.
+```{r extracting_opponents}
+opponents <- str_extract_all(player_lines, "\\d+")
+opponents[[1]]
+```
+
+## 6. Calculate Average Opponent Pre-Rating
+For each player, I used the opponent IDs to look up pre-ratings and calculated the average.
+```{r avg_opponent_rating}
+avg_opponent <- sapply(opponents, function(opp) {
+  opp <- as.numeric(opp)
+  mean(df$PreRating[opp], na.rm = TRUE)
+})
+df$AvgOpponent <- round(avg_opponent, 0)
+head(df, 10)
+```
+
+## 7. Export to CSV
+Finally, I exported the cleaned dataset to a CSV file that can be used for SQL or further analysis.
+```{r export_data}
+write.csv(df, "chess_players.csv", row.names = FALSE)
+```
+
+## 8. Conclusion
+I transformed the raw chess tournament text into a structured dataset. My final CSV contains each player’s name, state, total points, pre-rating, and average opponent pre-rating. The dataset is now clean and ready for further analysis.
