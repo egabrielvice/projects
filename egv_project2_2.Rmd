@@ -1,0 +1,84 @@
+---
+title: "Tidying and Transforming Country GDP and Population Data"
+author: "Escarlet Gabriel Vicente"
+date: "2025-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+## 1. Introduction
+In this part, I worked with a dataset showing the population and GDP for three countries (USA, China, and India) across three different years: 2000, 2005, and 2010.
+The dataset is untidy because it is presented in a wide format, where each year has its own set of columns for both population and GDP.
+The goal was to tidy the dataset, reshape it into a long format, and make it easier to analyze and visualize economic and population trends over time.
+
+---
+
+## 2. Load Libraries
+To start, I loaded the libraries used for organizing, transforming, and analyzing the data.
+```{r libraries}
+library(tidyverse)
+```
+
+## 3. Create the Dataset
+I recreated the dataset in wide format to match the structure of the original table.
+This table contains population and GDP data for the years 2000, 2005, and 2010, stored in separate columns for each year.
+```{r create_dataset}
+gdp_data <- data.frame(
+  Country = c("USA", "China", "India"),
+  `2000_Population` = c(282162411, 1262645000, 1053050912),
+  `2000_GDP` = c(10285, 1198, 476),
+  `2005_Population` = c(295516599, 1307560000, 1139964932),
+  `2005_GDP` = c(13094, 2286, 834),
+  `2010_Population` = c(309327143, 1340910000, 1224614327),
+  `2010_GDP` = c(14964, 6087, 1708)
+)
+
+gdp_data
+```
+
+## 4. Tidy the Data
+The dataset was untidy because each year had separate columns for population and GDP.
+To tidy it, I converted the dataset into long format using pivot_longer(), creating columns for year, population, and GDP.
+This format makes it easier to perform comparisons and trend analyses across countries and time periods.
+```{r tidy_data}
+gdp_long <- gdp_data %>%
+  pivot_longer(
+    cols = -Country,
+    names_to = c("Year", ".value"),
+    names_sep = "_"
+  )
+
+gdp_long
+```
+
+## 5. Transform and Summary
+Next, I summarized population and GDP changes over time to highlight growth patterns for each country.
+This allowed me to observe how both variables evolved between 2000 and 2010.
+```{r transformation}
+summary_table <- gdp_long %>%
+  group_by(Country) %>%
+  summarise(
+    Population_Growth = max(Population) - min(Population),
+    GDP_Growth = max(GDP) - min(GDP)
+  )
+
+summary_table
+```
+
+## 6. Visualization
+To visualize the economic trends, I created a line chart showing GDP changes over time for each country.
+This chart illustrates how each nation’s economy developed during the decade, with China showing the fastest rate of GDP growth.
+```{r line_chart}
+ggplot(gdp_long, aes(x = Year, y = GDP, color = Country, group = Country)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  labs(title = "GDP Growth (2000–2010)", y = "GDP per Capita ($)", x = "Year") +
+  theme_minimal()
+```
+
+## 7. Conclusion
+After tidying and transforming the dataset, I was able to clearly visualize population and GDP trends from 2000 to 2010.
+This part of the project demonstrated how reshaping wide-format data into long format provides flexibility for comparison, statistical summaries, and visual analysis of growth over time.

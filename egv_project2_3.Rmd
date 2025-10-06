@@ -1,0 +1,87 @@
+---
+title: "Tidying and Transforming Travel Agency Price Data"
+author: "Escarlet Gabriel Vicente"
+date: "2025-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+## 1. Introduction
+In this final part, I worked with a travel pricing dataset comparing different booking agencies and service types (flights and hotels) across four seasons: Winter, Spring, Summer, and Fall.
+The dataset is untidy because it stores seasons as separate columns and combines multiple variables (Agency and Service Type) into a single field such as TravelOne - Flight.
+The goal was to tidy this structure into a long format and make it easier to compare prices across seasons, agencies, and services.
+
+---
+
+## 2. Load Libraries
+To start, I loaded the libraries used for organizing, transforming, and analyzing the data.
+```{r libraries}
+library(tidyverse)
+```
+
+## 3. Create the Dataset
+I recreated the dataset in wide format to match the original structure.
+```{r create_dataset}
+travel_prices <- data.frame(
+  Agency = c("TravelOne - Flight", "TravelOne - Hotel",
+             "Google Travel - Flight", "Google Travel - Hotel",
+             "Booking.com - Flight", "Booking.com - Hotel"),
+  Winter = c(350, 500, 340, 480, 360, 490),
+  Spring = c(400, 550, 410, 530, 415, 540),
+  Summer = c(525, 700, 510, 690, 520, 710),
+  Fall = c(375, 600, 365, 580, 370, 590)
+)
+
+travel_prices
+```
+
+## 4. Tidy the Data
+The dataset was untidy because each season was stored as a separate column and agency information mixed two variables (agency and service type).
+I reshaped the dataset into a long format using pivot_longer() and then separated the combined Agency field into two distinct variables: Agency and Service.
+```{r tidy_data}
+travel_tidy <- travel_prices %>%
+  pivot_longer(
+    cols = Winter:Fall,
+    names_to = "Season",
+    values_to = "Price"
+  ) %>%
+  separate(Agency, into = c("Agency", "Service"), sep = " - ")
+
+travel_tidy
+```
+
+## 5. Transform and Summary
+Next, I summarized the data to find the average price per service type and per season.
+This allowed me to identify which agencies and seasons tend to offer the most cost-effective travel options.
+```{r transformation}
+avg_by_service <- travel_tidy %>%
+  group_by(Service) %>%
+  summarise(Average_Price = mean(Price))
+
+avg_by_season <- travel_tidy %>%
+  group_by(Season) %>%
+  summarise(Average_Price = mean(Price))
+
+avg_by_service
+avg_by_season
+```
+
+## 6. Visualization
+To better compare seasonal trends, I created a line chart showing the average travel prices across the four seasons.
+```{r line_chart}
+ggplot(travel_tidy, aes(x = Season, y = Price, color = Service, group = Service)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  labs(title = "Average Travel Prices by Season and Service Type", 
+       y = "Average Price ($)", 
+       x = "Season") +
+  theme_minimal()
+```
+
+## 7. Conclusion
+After tidying and transforming the dataset, I was able to clearly compare seasonal price patterns across travel agencies and services.
+This final part of the project illustrated how untidy data, where multiple variables are embedded in column names or combined fields, can be reshaped into an organized structure that supports efficient analysis and visualization.
+Together, all three datasets demonstrated the importance of data tidying for uncovering insights, ensuring clarity, and enabling reproducible analysis.
