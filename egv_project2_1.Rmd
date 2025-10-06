@@ -1,0 +1,83 @@
+---
+title: "Tidying and Transforming Travel Expense Report Data"
+author: "Escarlet Gabriel Vicente"
+date: "2025-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+## 1. Introduction
+In this assignment, I worked with a *Travel Expense Report* showing daily spending for meals, hotels, and transport across two cities: San Jose and Seattle.
+The dataset is untidy because it uses section headers as city labels, mixes raw data with subtotals, and includes total rows that do not represent actual observations.
+The goal was to tidy the dataset, transform it into a structured format, and calculate the total and average expenses by city.
+
+---
+
+## 2. Load Libraries
+To start, I loaded the libraries used for organizing, transforming, and analyzing the data.
+
+```{r libraries}
+library(tidyverse)
+```
+
+## 3. Create the Dataset
+I recreated the dataset in wide format to match the structure of the original report.
+This table represents the daily meal, hotel, and transport expenses for each city. It serves as the untidy data source that will be cleaned and transformed for analysis.
+
+```{r create_dataset}
+travel <- data.frame(
+  City = c("San Jose", "San Jose", "Seattle", "Seattle"),
+  Date = c("25-Aug-97", "26-Aug-97", "27-Aug-97", "28-Aug-97"),
+  Meals = c(37.74, 27.28, 96.25, 35.00),
+  Hotels = c(112.00, 112.00, 109.00, 109.00),
+  Transport = c(45.00, 45.00, 36.00, 36.00)
+)
+travel
+```
+
+## 4. Tidy the Data
+The dataset was already close to tidy, but I made sure all columns were in the correct format.
+I converted the Date column into a proper date format and verified that all numeric columns were recognized correctly.
+This step ensured the dataset was clean and ready for analysis.
+```{r tidy_data}
+travel <- travel %>%
+  mutate(Date = as.Date(Date, format = "%d-%b-%y"))
+
+str(travel)
+```
+
+## 5. Transform and Summary
+Next, I summarized the total spending for each city across all categories.
+I calculated the total amount spent on meals, hotels, and transport for San Jose and Seattle individually, and then computed the grand total across both trips.
+```{r transformation}
+city_totals <- travel %>%
+  group_by(City) %>%
+  summarise(
+    Meals = sum(Meals),
+    Hotels = sum(Hotels),
+    Transport = sum(Transport),
+    Total = sum(Meals + Hotels + Transport)
+  )
+
+city_totals
+
+grand_total <- sum(city_totals$Total)
+grand_total
+```
+
+## 6. Visualization
+To better compare the two locations, I created a bar chart showing total spending per city.
+This visualization highlights that Seattle had slightly higher overall expenses than San Jose, mainly due to higher meal costs.
+```{r bar_chart}
+ggplot(city_totals, aes(x = City, y = Total, fill = City)) +
+  geom_col() +
+  labs(title = "Total Travel Expenses by City", y = "Total ($)") +
+  theme_minimal()
+```
+
+## 7. Conclusion
+After tidying and transforming the dataset, the total travel cost was $800.27, with Seattle being slightly more expensive overall than San Jose.
+This exercise demonstrated how an untidy report with subtotals can be cleaned into a structured dataset ready for analysis.
