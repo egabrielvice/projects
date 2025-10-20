@@ -1,0 +1,87 @@
+---
+title: "Most Valued Data Science Skills"
+author: "Escarlet Gabriel Vicente"
+date: "2025-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Introduction
+
+In today’s data-driven world, *data science* has become one of the most in-demand and interdisciplinary career paths.
+Professionals in this field are expected to combine technical, analytical, and communication skills to extract insights and drive decisions using data.
+
+This project explores the question:
+
+“Which are the most valued data science skills?”
+
+Using a dataset from *Kaggle (Data Science Job Postings & Skills, 2024)*, we analyze more than *12,000 job listings* to identify the most frequently requested skills among employers in the data science job market.
+
+## Data Source
+**Dataset:** [Data Science Job Postings & Skills (2024)](https://www.kaggle.com/datasets/asaniczka/data-science-job-postings-and-skills)  
+**Author:** asaniczka  
+**Platform:** Kaggle  
+**Source:** LinkedIn job postings  
+**License:** ODC Attribution License  
+
+This dataset provides a raw dump of data science related job postings collected from LinkedIn.
+It includes details such as job titles, companies, locations, and most importantly, a list of skills mentioned for each posting.
+The main objective of the dataset is to allow users to practice data cleaning and to explore which skills are most relevant in the current job market.
+
+```{r}
+library(tidyverse)
+```
+
+## Step 1 - Import the Dataset
+```{r}
+job_skills <- read_csv("job_skills.csv")
+```
+
+## Step 2 - Explore the Data
+
+```{r}
+head(job_skills)
+glimpse(job_skills)
+```
+
+## Step 3 - Clean and Transform the Skills Column
+```{r}
+skills_clean <- job_skills %>%
+  separate_rows(job_skills, sep = ",") %>%        
+  mutate(job_skills = str_trim(job_skills)) %>%   
+  filter(job_skills != "")
+
+skills_clean
+```
+
+## Step 4 - Count Skill Frequencies
+```{r}
+skill_counts <- skills_clean %>%
+  count(job_skills, sort = TRUE)
+
+head(skill_counts, 10)
+```
+
+## Step 5 - Top 10 Skills Visualization
+```{r}
+skill_counts %>%
+  slice_max(n, n = 10) %>%
+  ggplot(aes(x = reorder(job_skills, n), y = n)) +
+  geom_col(fill = "orange") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Most Valued Data Science Skills (Job Postings)",
+    x = "Skill",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+```
+
+## Summary
+The analysis shows that Python, SQL, and Machine Learning are among the most frequently mentioned skills in job postings.
+Communication, Data Analysis, and Visualization tools like Tableau and R also appear prominently, suggesting that data scientists must balance technical proficiency with analytical and storytelling skills.
+
+
