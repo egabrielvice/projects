@@ -1,0 +1,209 @@
+---
+title: "Most Valued Data Science Skills"
+author: "Escarlet Gabriel Vicente"
+date: "2025-10-22"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(DBI)
+library(RPostgres)
+library(tidyverse)
+```
+
+---
+
+## 1. Introduction
+
+In today’s data-driven world, *data science* has become one of the most in-demand and interdisciplinary career paths. Professionals are expected to combine technical, analytical, and communication skills to extract insights and drive decisions using data.
+
+This project explores the question: **“Which are the most valued data science skills?”**
+
+Using a dataset from *Kaggle (Data Science Job Postings & Skills, 2024)*, the goal is to identify the most frequently requested skills among employers in data science job postings.
+
+---
+
+## 2. Tools and Workflow
+
+This project was completed individually using:
+
+* **PostgreSQL (pgAdmin 4)** — to design and store normalized tables
+* **RStudio** — to connect to the database, perform analysis, and visualize results
+* **Kaggle Dataset** — for raw data collection
+
+This workflow demonstrates data acquisition, transformation, storage, and analysis from start to finish.
+
+---
+
+## 3. Data Collection and Loading
+
+**Dataset:** [Data Science Job Postings & Skills (2024)](https://www.kaggle.com/datasets/asaniczka/data-science-job-postings-and-skills)
+
+**Author:** asaniczka
+
+**Platform:** Kaggle
+
+**Source:** LinkedIn job postings
+
+**License:** ODC Attribution License
+
+
+The dataset includes two columns:
+
+* `job_link`: a unique link for each job posting
+* `job_skills`: a comma-separated list of skills mentioned in the listing
+
+### Import and Load into PostgreSQL
+
+A PostgreSQL database named **data_science_jobs** was created, and the dataset was imported into a raw table:
+
+```{r eval=FALSE}
+CREATE TABLE raw_job_skills (
+  job_link TEXT,
+  job_skills TEXT
+);
+```
+
+---
+
+## 4. Database Normalization
+
+To comply with relational design principles, the data was normalized into three tables:
+
+* **jobs** (job_id, job_link)
+* **skills** (skill_id, skill_name)
+* **job_skills** (job_id, skill_id) — linking table for many-to-many relationships
+
+The normalization process ensured a many-to-many relationship between job postings and skills, allowing efficient querying and analysis.
+
+The following SQL script summarizes the normalization process:
+
+```{r eval=FALSE}
+-- Create normalized tables
+CREATE TABLE jobs (
+  job_id SERIAL PRIMARY KEY,
+  job_link TEXT UNIQUE
+);
+
+CREATE TABLE skills (
+  skill_id SERIAL PRIMARY KEY,
+  skill_name TEXT UNIQUE
+);
+
+CREATE TABLE job_skills (
+  job_id INTEGER REFERENCES jobs(job_id),
+  skill_id INTEGER REFERENCES skills(skill_id),
+  PRIMARY KEY (job_id, skill_id)
+);
+
+-- Insert distinct job links
+INSERT INTO jobs (job_link)
+SELECT DISTINCT job_link
+FROM raw_job_skills
+WHERE job_link IS NOT NULL;
+
+-- Insert distinct skills
+INSERT INTO skills (skill_name)
+SELECT DISTINCT trim(skill)
+FROM (
+  SELECT unnest(string_to_array(job_skills, ',')) AS skill
+  FROM raw_job_skills
+) AS all_skills
+WHERE trim(skill) <> '';
+
+-- Link jobs to skills safely
+INSERT INTO job_skills (job_id, skill_id)
+SELECT j.job_id, s.skill_id
+FROM raw_job_skills r
+JOIN jobs j ON r.job_link = j.job_link
+JOIN LATERAL unnest(string_to_array(r.job_skills, ',')) AS skill_array(skill_text) ON TRUE
+JOIN skills s ON trim(skill_array.skill_text) = s.skill_name
+ON CONFLICT DO NOTHING;
+```
+
+---
+
+## 5. Connecting PostgreSQL to R
+
+The normalized tables were connected to RStudio through the RPostgres and DBI libraries.
+A secure password management approach was implemented using the .Renviron file, which stores the PostgreSQL password as an environment variable (POSTGRES_PASS).
+This ensures reproducibility while keeping credentials confidential.
+
+```{r}
+con <- dbConnect(
+  RPostgres::Postgres(),
+  dbname = "data_science_jobs",
+  host = "localhost",
+  port = 5432,
+  user = "postgres",
+  password = Sys.getenv("POSTGRES_PASS")
+)
+```
+
+---
+
+## 6. Data Exploration and Visualization
+
+The query below retrieves the **Top 10 Most Frequently Mentioned Skills**:
+
+```{r}
+top_skills <- dbGetQuery(con, "
+  SELECT s.skill_name, COUNT(js.job_id) AS frequency
+  FROM job_skills js
+  JOIN skills s ON js.skill_id = s.skill_id
+  GROUP BY s.skill_name
+  ORDER BY frequency DESC
+  LIMIT 10;
+")
+
+top_skills
+```
+
+### Visualization
+
+```{r}
+top_skills %>%
+  ggplot(aes(x = reorder(skill_name, frequency), y = frequency)) +
+  geom_col(fill = 'orange') +
+  coord_flip() +
+  labs(
+    title = 'Top 10 Most Valued Data Science Skills',
+    x = 'Skill',
+    y = 'Frequency'
+  ) +
+  theme_minimal()
+```
+
+After completing the visualization, the database connection was closed:
+
+```{r}
+dbDisconnect(con)
+```
+
+---
+
+## 7. Findings
+
+The analysis revealed that:
+
+* **Python** and **SQL** are the most frequently mentioned skills in data science job postings.
+* Other important skills include **Communication**, **Data Analysis**, and **Machine Learning**.
+* Visualization tools such as **Tableau** and programming languages like **R** also appear frequently.
+
+These results emphasize that employers value professionals who combine technical expertise with strong analytical and communication abilities.
+
+---
+
+## 8. Conclusion
+
+This project demonstrates the complete process of:
+
+1. Collecting real-world job posting data,
+2. Loading and normalizing it in a relational PostgreSQL database,
+3. Connecting RStudio to perform exploratory data analysis, and
+4. Visualizing the findings effectively.
+
+Through this end-to-end workflow, I gained practical experience in data acquisition, database design, and data visualization — all key components of modern data management.
